@@ -1,1578 +1,561 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AniLog — Tu Diario Personal de Anime</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- Google Fonts: Inter -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>24FPS</title>
+  
+  <!-- Optimización PWA para iOS (iPhone 16) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="24FPS">
+  <meta name="theme-color" content="#0e1115">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            brand: {
-              50: '#ecfdf5',
-              400: '#34d399',
-              500: '#10b981', // Verde esmeralda estilo Letterboxd/AniList
-              600: '#059669',
-              accent: '#00e054', // Letterboxd signature green
-              orange: '#ff8000',
-              blue: '#40bcf4'
-            },
-            surface: {
-              950: '#0e1115',
-              900: '#14181d', // fondo base oscuro Letterboxd
-              850: '#1b2228',
-              800: '#202830', // tarjetas y contenedores
-              700: '#2c3640',
-              600: '#445566'
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
   <style>
-    /* Estilos personalizados para scrollbar y animaciones */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0e1115;
+      color: #e5e7eb;
+      -webkit-tap-highlight-color: transparent;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
-    ::-webkit-scrollbar-track {
-      background: #14181d;
+    .poster-glow:active {
+      transform: scale(0.97);
     }
-    ::-webkit-scrollbar-thumb {
-      background: #2c3640;
-      border-radius: 4px;
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #445566;
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
-    .poster-glow:hover {
-      box-shadow: 0 10px 25px -5px rgba(0, 224, 84, 0.25);
-    }
-    .modal-enter {
-      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    @keyframes modalFadeIn {
-      from { opacity: 0; transform: scale(0.96) translateY(8px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   </style>
 </head>
-<body class="bg-surface-950 text-slate-200 min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black">
+<body class="min-h-screen flex flex-col pb-24 select-none">
 
-  <!-- HEADER / NAVEGACIÓN -->
-  <header class="sticky top-0 z-40 bg-surface-900/90 backdrop-blur-md border-b border-surface-700/60 transition-all">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <!-- Logo y Título -->
-      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('explore')">
-        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-brand-accent via-emerald-500 to-cyan-500 flex items-center justify-center text-surface-950 shadow-md">
-          <i class="fa-solid fa-film text-lg"></i>
-        </div>
-        <div>
-          <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
-            Ani<span class="text-brand-accent">Log</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- Menú Navegación Desktop -->
-      <nav class="hidden md:flex items-center space-x-1 lg:space-x-2 bg-surface-850/80 p-1.5 rounded-xl border border-surface-700/50">
-        <button id="nav-btn-explore" onclick="switchTab('explore')" class="nav-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 text-white bg-surface-700">
-          <i class="fa-solid fa-compass text-brand-accent"></i> Explorar
-        </button>
-        <button id="nav-btn-library" onclick="switchTab('library')" class="nav-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
-          <i class="fa-solid fa-layer-group"></i> Mi Biblioteca
-          <span id="badge-library-count" class="text-xs bg-surface-700 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">0</span>
-        </button>
-        <button id="nav-btn-diary" onclick="switchTab('diary')" class="nav-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
-          <i class="fa-solid fa-book-bookmark"></i> Diario / Logs
-        </button>
-        <button id="nav-btn-stats" onclick="switchTab('stats')" class="nav-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
-          <i class="fa-solid fa-chart-pie"></i> Estadísticas
-        </button>
-      </nav>
-
-      <!-- Botones de Respaldo y Menú Móvil -->
-      <div class="flex items-center gap-2">
-        <button onclick="exportData()" title="Descargar respaldo JSON de tus datos" class="p-2 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-lg bg-surface-800 hover:bg-surface-700 border border-surface-700 text-slate-300 hover:text-white transition flex items-center gap-1.5">
-          <i class="fa-solid fa-file-export text-brand-blue"></i>
-          <span class="hidden sm:inline">Exportar</span>
-        </button>
-        
-        <label title="Cargar archivo JSON previo" class="cursor-pointer p-2 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-lg bg-surface-800 hover:bg-surface-700 border border-surface-700 text-slate-300 hover:text-white transition flex items-center gap-1.5">
-          <i class="fa-solid fa-file-import text-brand-orange"></i>
-          <span class="hidden sm:inline">Importar</span>
-          <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importData(event)">
-        </label>
-      </div>
+  <!-- Header Superior -->
+  <header class="sticky top-0 z-40 bg-[#0e1115]/90 backdrop-blur-md border-b border-gray-800/80 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full bg-[#00e054] shadow-[0_0_10px_#00e054]"></div>
+      <span class="text-xl font-extrabold tracking-tight text-white">24<span class="text-[#00e054]">FPS</span></span>
     </div>
-
-    <!-- Menú móvil horizontal rápido -->
-    <div class="flex md:hidden border-t border-surface-800 bg-surface-900 px-2 py-1 justify-around text-xs font-medium">
-      <button onclick="switchTab('explore')" id="mob-btn-explore" class="p-2 text-brand-accent flex flex-col items-center">
-        <i class="fa-solid fa-compass text-base"></i>
-        <span>Buscar</span>
+    <div class="flex items-center gap-2">
+      <button onclick="exportData()" class="p-2 text-gray-400 hover:text-white rounded-lg bg-gray-900 border border-gray-800 text-xs font-semibold">
+        Exportar
       </button>
-      <button onclick="switchTab('library')" id="mob-btn-library" class="p-2 text-slate-400 flex flex-col items-center">
-        <i class="fa-solid fa-layer-group text-base"></i>
-        <span>Biblioteca</span>
-      </button>
-      <button onclick="switchTab('diary')" id="mob-btn-diary" class="p-2 text-slate-400 flex flex-col items-center">
-        <i class="fa-solid fa-book-bookmark text-base"></i>
-        <span>Diario</span>
-      </button>
-      <button onclick="switchTab('stats')" id="mob-btn-stats" class="p-2 text-slate-400 flex flex-col items-center">
-        <i class="fa-solid fa-chart-pie text-base"></i>
-        <span>Stats</span>
-      </button>
+      <label class="p-2 text-gray-400 hover:text-white rounded-lg bg-gray-900 border border-gray-800 text-xs font-semibold cursor-pointer">
+        Importar
+        <input type="file" accept=".json" onchange="importData(event)" class="hidden">
+      </label>
     </div>
   </header>
 
-  <!-- NOTIFICACIÓN FLOTANTE TOAST -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-surface-800 border border-surface-600/60 shadow-2xl rounded-xl px-4 py-3 flex items-center gap-3 text-sm text-slate-100">
-    <i id="toast-icon" class="fa-solid fa-circle-check text-brand-accent text-lg"></i>
-    <span id="toast-message">Mensaje aquí</span>
-  </div>
+  <!-- Buscador -->
+  <section class="px-4 pt-4 pb-2">
+    <div class="relative">
+      <input type="text" id="searchInput" placeholder="Buscar animes..." 
+        class="w-full bg-[#161a20] border border-gray-800 rounded-xl px-4 py-3 pl-11 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00e054] transition-colors"
+        onkeydown="if(event.key==='Enter') executeSearch()">
+      <svg class="w-5 h-5 text-gray-500 absolute left-3.5 top-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+    </div>
+  </section>
 
-  <!-- CONTENIDO PRINCIPAL -->
-  <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
-
-    <!-- SECCIÓN 1: EXPLORAR / BUSCAR (JIKAN API) -->
-    <section id="view-explore" class="space-y-6">
-      <!-- Hero de Búsqueda -->
-      <div class="relative rounded-2xl bg-gradient-to-br from-surface-900 via-surface-850 to-surface-900 p-6 md:p-8 border border-surface-700/60 shadow-lg">
-        <div class="max-w-2xl">
-          <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-            Descubre, registra y califica anime.
-          </h1>
-          <p class="text-slate-400 text-sm md:text-base mt-2">
-            Base de datos conectada en tiempo real con MyAnimeList. Guarda tus registros de forma privada en tu navegador.
-          </p>
-        </div>
-
-        <!-- Barra de búsqueda -->
-        <form onsubmit="handleSearch(event)" class="mt-6 flex flex-col sm:flex-row gap-2 max-w-3xl">
-          <div class="relative flex-grow">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
-              <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
-            <input 
-              type="text" 
-              id="search-input" 
-              placeholder="Buscar anime (ej. Shingeki no Kyojin, Frieren, Steins;Gate)..." 
-              class="w-full pl-11 pr-4 py-3 bg-surface-950/80 rounded-xl border border-surface-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 focus:border-brand-accent transition text-sm md:text-base"
-              autocomplete="off"
-            />
-          </div>
-          <button 
-            type="submit" 
-            class="px-6 py-3 bg-brand-accent hover:bg-emerald-400 text-surface-950 font-bold rounded-xl transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-brand-accent/20">
-            <span>Buscar</span>
-          </button>
-        </form>
-
-        <div class="mt-3 flex items-center gap-2 text-xs text-slate-400 flex-wrap">
-          <span class="text-slate-400 font-medium">Búsquedas rápidas:</span>
-          <button onclick="quickSearch('Sousou no Frieren')" class="hover:text-brand-accent underline">Frieren</button>
-          <span>•</span>
-          <button onclick="quickSearch('Chainsaw Man')" class="hover:text-brand-accent underline">Chainsaw Man</button>
-          <span>•</span>
-          <button onclick="quickSearch('Cyberpunk: Edgerunners')" class="hover:text-brand-accent underline">Edgerunners</button>
-          <span>•</span>
-          <button onclick="loadTopAnime()" class="text-brand-blue hover:underline font-medium">🔥 Ver Top Trending</button>
-        </div>
+  <!-- Vistas Principales -->
+  <main class="flex-1 px-4 py-2">
+    <!-- Vista 1: Explorar / Recomendados -->
+    <div id="view-explore" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 id="sectionTitle" class="text-xs uppercase font-bold tracking-wider text-gray-400">Recomendados y Populares</h2>
+        <span id="cacheBadge" class="hidden text-[10px] bg-emerald-950/80 text-[#00e054] border border-emerald-800/60 px-2 py-0.5 rounded-full font-medium">Carga Rápida</span>
       </div>
-
-      <!-- Título de sección de resultados -->
-      <div class="flex items-center justify-between pt-2">
-        <h2 id="search-section-title" class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-fire text-brand-orange"></i> Animes Más Populares
-        </h2>
-        <span id="results-count" class="text-xs text-slate-400 font-mono"></span>
-      </div>
-
-      <!-- Spinner cargando -->
-      <div id="explore-loader" class="hidden py-20 text-center">
-        <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-surface-700 border-t-brand-accent"></div>
-        <p class="text-sm text-slate-400 mt-4">Consultando Jikan API...</p>
-      </div>
-
-      <!-- Grid de resultados -->
-      <div id="explore-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        <!-- Render dinámico aquí -->
-      </div>
-    </section>
-
-    <!-- SECCIÓN 2: MI BIBLIOTECA -->
-    <section id="view-library" class="hidden space-y-6">
-      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-surface-800">
-        <div>
-          <h1 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <i class="fa-solid fa-layer-group text-brand-accent"></i> Mi Biblioteca
-          </h1>
-          <p class="text-slate-400 text-sm mt-1">Todos los animes guardados en tu almacenamiento local.</p>
-        </div>
-
-        <!-- Filtros y ordenamiento -->
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- Filtro de estado -->
-          <div class="flex bg-surface-900 border border-surface-700 p-1 rounded-xl text-xs font-semibold">
-            <button onclick="setLibraryFilter('all')" class="lib-filter-btn px-3 py-1.5 rounded-lg bg-surface-700 text-white" data-status="all">Todos</button>
-            <button onclick="setLibraryFilter('watching')" class="lib-filter-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-status="watching">Viendo</button>
-            <button onclick="setLibraryFilter('completed')" class="lib-filter-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-status="completed">Vistos</button>
-            <button onclick="setLibraryFilter('plan_to_watch')" class="lib-filter-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-status="plan_to_watch">Por ver</button>
-            <button onclick="setLibraryFilter('favorites')" class="lib-filter-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-status="favorites">
-              <i class="fa-solid fa-heart text-rose-500"></i> Favoritos
-            </button>
-          </div>
-
-          <!-- Orden -->
-          <select id="library-sort" onchange="renderLibrary()" class="bg-surface-900 border border-surface-700 text-slate-300 text-xs rounded-xl px-3 py-2 font-medium focus:outline-none">
-            <option value="recent">Recientes primero</option>
-            <option value="rating_desc">Mayor calificación</option>
-            <option value="title_asc">Título (A-Z)</option>
-            <option value="episodes_desc">Más episodios</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Grid de la biblioteca -->
-      <div id="library-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        <!-- Render dinámico aquí -->
-      </div>
-
-      <!-- Estado vacío biblioteca -->
-      <div id="library-empty" class="hidden py-24 text-center">
-        <div class="w-16 h-16 rounded-full bg-surface-850 flex items-center justify-center mx-auto text-slate-500 text-2xl mb-4">
-          <i class="fa-solid fa-box-open"></i>
-        </div>
-        <h3 class="text-base font-bold text-slate-300">No hay animes en este filtro</h3>
-        <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">Empieza explorando el catálogo para agregar animes a tu colección.</p>
-        <button onclick="switchTab('explore')" class="mt-4 px-4 py-2 bg-surface-800 hover:bg-surface-700 text-brand-accent text-xs font-semibold rounded-lg border border-surface-700 transition">
-          Buscar animes ahora
-        </button>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 3: DIARIO / LOG -->
-    <section id="view-diary" class="hidden space-y-6">
-      <div class="pb-4 border-b border-surface-800">
-        <h1 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-          <i class="fa-solid fa-book-bookmark text-brand-orange"></i> Diario de Visionado
-        </h1>
-        <p class="text-slate-400 text-sm mt-1">Cronología detallada de tus reseñas, fechas y notas personales estilo Letterboxd.</p>
-      </div>
-
-      <!-- Lista cronológica del diario -->
-      <div id="diary-timeline" class="space-y-4 max-w-4xl mx-auto">
-        <!-- Render de logs aquí -->
-      </div>
-
-      <!-- Estado vacío diario -->
-      <div id="diary-empty" class="hidden py-20 text-center">
-        <div class="w-16 h-16 rounded-full bg-surface-850 flex items-center justify-center mx-auto text-slate-500 text-2xl mb-4">
-          <i class="fa-regular fa-calendar-xmark"></i>
-        </div>
-        <h3 class="text-base font-bold text-slate-300">Aún no has registrado entradas en tu diario</h3>
-        <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">Añade una fecha de visualización o escribe una reseña al registrar un anime para que aparezca aquí.</p>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 4: ESTADÍSTICAS -->
-    <section id="view-stats" class="hidden space-y-6">
-      <div class="pb-4 border-b border-surface-800">
-        <h1 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-          <i class="fa-solid fa-chart-pie text-brand-blue"></i> Estadísticas Personales
-        </h1>
-        <p class="text-slate-400 text-sm mt-1">Resumen cuantitativo de tus horas y géneros preferidos.</p>
-      </div>
-
-      <!-- Tarjetas de métricas -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-surface-900 border border-surface-800 p-5 rounded-2xl">
-          <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Total Animes</span>
-          <div id="stat-total-anime" class="text-3xl font-black text-white mt-1">0</div>
-          <span class="text-xs text-slate-400 mt-2 block">En tu biblioteca</span>
-        </div>
-        <div class="bg-surface-900 border border-surface-800 p-5 rounded-2xl">
-          <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Episodios Vistos</span>
-          <div id="stat-total-episodes" class="text-3xl font-black text-brand-accent mt-1">0</div>
-          <span id="stat-total-hours" class="text-xs text-slate-400 mt-2 block">~0 horas estimadas</span>
-        </div>
-        <div class="bg-surface-900 border border-surface-800 p-5 rounded-2xl">
-          <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Completados</span>
-          <div id="stat-completed-count" class="text-3xl font-black text-brand-blue mt-1">0</div>
-          <span class="text-xs text-slate-400 mt-2 block">Animes terminados</span>
-        </div>
-        <div class="bg-surface-900 border border-surface-800 p-5 rounded-2xl">
-          <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Nota Promedio</span>
-          <div id="stat-avg-score" class="text-3xl font-black text-brand-orange mt-1">0.0</div>
-          <div id="stat-avg-stars" class="text-xs text-amber-400 mt-2">☆☆☆☆☆</div>
-        </div>
-      </div>
-
-      <!-- Desglose por estados y géneros -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Estados -->
-        <div class="bg-surface-900 border border-surface-800 p-6 rounded-2xl">
-          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-bars-progress text-slate-400"></i> Distribución de Estados
-          </h3>
-          <div id="stats-status-breakdown" class="space-y-3">
-            <!-- Barra de progreso dinámica -->
-          </div>
-        </div>
-
-        <!-- Top Géneros -->
-        <div class="bg-surface-900 border border-surface-800 p-6 rounded-2xl">
-          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-tags text-slate-400"></i> Géneros Más Vistos
-          </h3>
-          <div id="stats-genres-container" class="space-y-3">
-            <!-- Barras de género dinámicas -->
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- MODAL 1: DETALLE DE ANIME (Info completa + acceso a loggear) -->
-  <div id="modal-detail" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div class="bg-surface-900 border border-surface-700/80 rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl relative modal-enter my-auto max-h-[92vh] flex flex-col">
-      <!-- Botón de Cerrar -->
-      <button onclick="closeModal('modal-detail')" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-surface-950/70 hover:bg-surface-800 text-slate-300 hover:text-white flex items-center justify-center transition">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-
-      <div class="overflow-y-auto p-5 sm:p-7 space-y-6">
-        <div class="flex flex-col sm:flex-row gap-6">
-          <!-- Poster grande -->
-          <div class="w-full sm:w-48 flex-shrink-0">
-            <img id="detail-poster" src="" alt="Poster" class="w-full rounded-xl object-cover shadow-lg border border-surface-700/60 aspect-[2/3]" />
-          </div>
-
-          <!-- Metadata -->
-          <div class="flex-grow space-y-3">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <h2 id="detail-title" class="text-xl sm:text-2xl font-black text-white leading-tight">Título de anime</h2>
-                <p id="detail-title-jp" class="text-xs text-slate-400 font-sans mt-0.5 italic"></p>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
-              <span id="detail-year" class="px-2.5 py-1 rounded-md bg-surface-800 text-slate-300 font-mono">2023</span>
-              <span id="detail-type" class="px-2.5 py-1 rounded-md bg-surface-800 text-slate-300">TV</span>
-              <span id="detail-episodes" class="px-2.5 py-1 rounded-md bg-surface-800 text-slate-300">24 eps</span>
-              <span id="detail-mal-score" class="px-2.5 py-1 rounded-md bg-surface-800 text-brand-orange font-mono flex items-center gap-1">
-                <i class="fa-solid fa-star"></i> <span>8.9</span> MAL
-              </span>
-            </div>
-
-            <!-- Géneros -->
-            <div id="detail-genres" class="flex flex-wrap gap-1.5 pt-1">
-              <!-- Tags de género -->
-            </div>
-
-            <!-- Acción de añadir/editar en biblioteca -->
-            <div class="pt-4 flex flex-wrap gap-3">
-              <button id="detail-log-btn" onclick="openLogModalFromDetail()" class="flex-1 min-w-[160px] py-2.5 px-4 bg-brand-accent hover:bg-emerald-400 text-surface-950 font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-brand-accent/20">
-                <i class="fa-solid fa-pen-to-square"></i> <span id="detail-log-btn-text">Registrar / Editar Log</span>
-              </button>
-              <button id="detail-quick-fav" onclick="toggleFavoriteFromDetail()" class="px-4 py-2.5 rounded-xl border border-surface-700 bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-white transition flex items-center gap-2 text-sm font-semibold">
-                <i id="detail-heart-icon" class="fa-regular fa-heart"></i>
-                <span class="hidden sm:inline">Favorito</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sinopsis -->
-        <div class="border-t border-surface-800 pt-4">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Sinopsis</h4>
-          <p id="detail-synopsis" class="text-sm text-slate-300 leading-relaxed max-h-48 overflow-y-auto pr-2"></p>
-        </div>
-
-        <!-- Mi registro actual (si existe en biblioteca) -->
-        <div id="detail-user-record" class="hidden border-t border-surface-800 pt-4 bg-surface-850/50 p-4 rounded-xl">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-brand-accent tracking-wider">Tu Registro en AniLog</span>
-            <span id="detail-user-status" class="text-xs font-semibold px-2 py-0.5 rounded bg-surface-800 text-slate-300">Viendo</span>
-          </div>
-          <div class="flex items-center gap-3 text-sm">
-            <div id="detail-user-stars" class="text-amber-400"></div>
-            <div class="text-xs text-slate-400" id="detail-user-progress">Episodios: 0 / 12</div>
-            <div class="text-xs text-slate-400 ml-auto" id="detail-user-date"></div>
-          </div>
-          <p id="detail-user-review" class="text-xs text-slate-300 italic mt-2 border-l-2 border-brand-accent pl-2.5"></p>
-        </div>
+      <div id="animeGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+        <!-- Render dinámico con precarga -->
       </div>
     </div>
-  </div>
 
-  <!-- MODAL 2: LOGGING & DIARY (Estilo Letterboxd: Rating, Estado, Review, Episodios) -->
-  <div id="modal-log" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl relative modal-enter my-auto flex flex-col">
-      <div class="p-5 border-b border-surface-800 flex items-center justify-between">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-brand-accent"></i> Registrar en tu Colección
-        </h3>
-        <button onclick="closeModal('modal-log')" class="text-slate-400 hover:text-white text-lg">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+    <!-- Vista 2: Biblioteca -->
+    <div id="view-library" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs uppercase font-bold tracking-wider text-gray-400">Mi Colección</h2>
+        <select id="statusFilter" onchange="renderLibrary()" class="bg-[#161a20] border border-gray-800 rounded-lg px-2.5 py-1 text-xs text-gray-300 focus:outline-none">
+          <option value="ALL">Todos</option>
+          <option value="WATCHING">Viendo</option>
+          <option value="COMPLETED">Vistos</option>
+          <option value="PLAN_TO_WATCH">Por ver</option>
+          <option value="DROPPED">Abandonados</option>
+        </select>
+      </div>
+      <div id="libraryGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3"></div>
+      <div id="emptyLibrary" class="hidden text-center py-16 text-gray-500 text-sm">
+        Aún no has registrado ningún anime.
+      </div>
+    </div>
+
+    <!-- Vista 3: Diario -->
+    <div id="view-diary" class="hidden space-y-3">
+      <h2 class="text-xs uppercase font-bold tracking-wider text-gray-400">Diario de Visionado</h2>
+      <div id="diaryList" class="space-y-3"></div>
+      <div id="emptyDiary" class="hidden text-center py-16 text-gray-500 text-sm">
+        Tu diario de notas está vacío.
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de Detalle & Review -->
+  <div id="detailModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-[#14181d] border-t sm:border border-gray-800 w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col overflow-hidden text-white">
+      <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+        <h3 id="modalTitle" class="font-bold text-base line-clamp-1 pr-4"></h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-white p-1 text-lg">✕</button>
       </div>
 
-      <form id="form-log" onsubmit="saveLogEntry(event)" class="p-5 sm:p-6 space-y-5">
-        <input type="hidden" id="log-anime-id" />
-
-        <!-- Mini resumen anime -->
-        <div class="flex items-center gap-3 bg-surface-850 p-3 rounded-xl border border-surface-800">
-          <img id="log-thumb" src="" class="w-12 h-16 object-cover rounded-lg border border-surface-700" />
-          <div class="overflow-hidden">
-            <h4 id="log-anime-title" class="text-sm font-bold text-white truncate">Título Anime</h4>
-            <p id="log-anime-meta" class="text-xs text-slate-400">TV • 12 episodios</p>
+      <div class="p-4 overflow-y-auto space-y-4">
+        <div class="flex gap-4">
+          <img id="modalPoster" src="" class="w-24 h-36 object-cover rounded-lg border border-gray-800 shadow-md">
+          <div class="flex-1 space-y-1.5 text-xs text-gray-300">
+            <p id="modalYear" class="text-gray-400"></p>
+            <p id="modalEpisodes" class="text-gray-400"></p>
+            <p id="modalGenres" class="text-[#00e054] font-medium"></p>
+            <p id="modalSynopsis" class="text-gray-400 text-[11px] line-clamp-4 leading-relaxed pt-1"></p>
           </div>
         </div>
 
-        <!-- Estado y Favorito -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Estado</label>
-            <select id="log-status" class="w-full bg-surface-950 border border-surface-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-accent">
-              <option value="watching">Viendo (Watching)</option>
-              <option value="completed">Visto (Completed)</option>
-              <option value="plan_to_watch">Por Ver (Plan to Watch)</option>
-              <option value="dropped">Abandonado (Dropped)</option>
+        <div class="bg-[#191e24] p-3.5 rounded-xl border border-gray-800 space-y-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-300">Estado</span>
+            <select id="entryStatus" class="bg-[#0e1115] border border-gray-800 rounded-lg px-2.5 py-1 text-xs text-white">
+              <option value="WATCHING">Viendo</option>
+              <option value="COMPLETED">Visto</option>
+              <option value="PLAN_TO_WATCH">Por ver</option>
+              <option value="DROPPED">Abandonado</option>
             </select>
           </div>
 
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-300">Calificación</span>
+            <div id="starContainer" class="flex gap-1 text-amber-400 text-lg cursor-pointer"></div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-300">Favorito</span>
+            <button id="likeBtn" type="button" onclick="toggleLike()" class="p-2 rounded-lg bg-[#0e1115] border border-gray-800 text-gray-500 transition-colors">
+              <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </button>
+          </div>
+
           <div>
-            <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Progreso de Episodios</label>
-            <div class="flex items-center gap-2">
-              <input 
-                type="number" 
-                id="log-episodes-watched" 
-                min="0" 
-                class="w-full bg-surface-950 border border-surface-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-accent"
-                placeholder="0"
-              />
-              <span class="text-slate-500 font-mono text-sm">/</span>
-              <span id="log-episodes-total" class="text-slate-400 font-mono text-sm">?</span>
-            </div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Reseña o notas</label>
+            <textarea id="entryReview" rows="3" placeholder="Escribe lo que pensaste de esta serie..." class="w-full bg-[#0e1115] border border-gray-800 rounded-lg p-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e054]"></textarea>
           </div>
         </div>
+      </div>
 
-        <!-- Calificación estilo Letterboxd (Estrellas interactivas + Escala 10) -->
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="text-xs font-bold uppercase text-slate-400">Tu Calificación</label>
-            <span id="star-score-display" class="text-xs font-mono font-bold text-brand-orange">Sin nota</span>
-          </div>
-          
-          <div class="flex items-center justify-between bg-surface-950 border border-surface-700/80 p-3 rounded-xl">
-            <!-- Selector de 5 estrellas con medias -->
-            <div class="flex items-center gap-1 text-2xl text-surface-600 cursor-pointer select-none" id="star-rating-container">
-              <!-- Generado dinámicamente -->
-            </div>
-            <input type="hidden" id="log-rating-value" value="0" />
-
-            <!-- Botón Like (Corazón) -->
-            <button 
-              type="button" 
-              id="log-favorite-btn" 
-              onclick="toggleLogFavoriteState()" 
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-700 text-slate-400 hover:text-white transition">
-              <i class="fa-solid fa-heart text-base transition-colors" id="log-heart-icon"></i>
-              <span class="text-xs font-semibold">Like</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Fecha de visionado (Letterboxd Diary Date) -->
-        <div>
-          <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Fecha del Log (Diario)</label>
-          <input 
-            type="date" 
-            id="log-watched-date" 
-            class="w-full bg-surface-950 border border-surface-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-accent"
-          />
-        </div>
-
-        <!-- Reseña / Notas -->
-        <div>
-          <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Reseña o Notas Personales</label>
-          <textarea 
-            id="log-review" 
-            rows="3" 
-            placeholder="¿Qué te pareció la animación, el desenlace, la banda sonora?..." 
-            class="w-full bg-surface-950 border border-surface-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-brand-accent placeholder-slate-600 resize-none"
-          ></textarea>
-        </div>
-
-        <!-- Acciones: Guardar y Eliminar -->
-        <div class="flex items-center justify-between pt-2 border-t border-surface-800">
-          <button 
-            type="button" 
-            id="btn-delete-log" 
-            onclick="deleteLogEntry()" 
-            class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1.5 px-2 py-1">
-            <i class="fa-regular fa-trash-can"></i> Quitar de biblioteca
-          </button>
-
-          <div class="flex items-center gap-2">
-            <button 
-              type="button" 
-              onclick="closeModal('modal-log')" 
-              class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition">
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              class="px-5 py-2 bg-brand-accent hover:bg-emerald-400 text-surface-950 font-bold rounded-xl text-sm transition shadow-lg shadow-brand-accent/20">
-              Guardar Entrada
-            </button>
-          </div>
-        </div>
-      </form>
+      <div class="p-3 border-t border-gray-800 flex gap-2">
+        <button id="deleteEntryBtn" onclick="deleteCurrentEntry()" class="hidden px-4 py-2.5 rounded-xl bg-red-950/40 text-red-400 border border-red-900/60 text-xs font-bold">
+          Borrar
+        </button>
+        <button onclick="saveCurrentEntry()" class="flex-1 py-2.5 rounded-xl bg-[#00e054] hover:bg-[#00c94b] text-black font-extrabold text-xs shadow-md transition-all">
+          Guardar Registro
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- PIE DE PÁGINA -->
-  <footer class="border-t border-surface-800 bg-surface-900 py-6 text-center text-xs text-slate-500 mt-12">
-    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>AniLog — Tu diario de anime 100% privado en LocalStorage. Desarrollado con Jikan API.</p>
-      <div class="flex items-center gap-4">
-        <button onclick="exportData()" class="hover:text-brand-accent transition">Descargar Backup</button>
-        <span>•</span>
-        <button onclick="clearAllDataPrompt()" class="hover:text-rose-400 transition">Reiniciar datos</button>
-      </div>
-    </div>
-  </footer>
+  <!-- Barra de Navegación Inferior -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#0e1115]/95 backdrop-blur-lg border-t border-gray-800/80 px-6 py-2 flex justify-around items-center">
+    <button onclick="switchTab('explore')" id="tab-explore" class="flex flex-col items-center gap-1 text-[#00e054]">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      <span class="text-[10px] font-bold">Explorar</span>
+    </button>
+    <button onclick="switchTab('library')" id="tab-library" class="flex flex-col items-center gap-1 text-gray-500">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      <span class="text-[10px] font-bold">Biblioteca</span>
+    </button>
+    <button onclick="switchTab('diary')" id="tab-diary" class="flex flex-col items-center gap-1 text-gray-500">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-bold">Diario</span>
+    </button>
+  </nav>
 
-  <!-- LÓGICA JAVASCRIPT COMPLETA -->
   <script>
-    /* ==========================================================
-       ESTADO LOCAL Y MODELO DE DATOS
-       ========================================================== */
-    const STORAGE_KEY = 'anilog_user_database_v1';
-    
-    // Base de datos reactiva local
-    let userLibrary = {}; 
-    /* Estructura de cada item en userLibrary:
-       {
-         mal_id: 1234,
-         title: "String",
-         title_japanese: "String",
-         image_url: "String",
-         episodes: 24,
-         genres: ["Action", "Sci-Fi"],
-         year: 2022,
-         synopsis: "...",
-         type: "TV",
-         // User custom data:
-         status: "watching" | "completed" | "plan_to_watch" | "dropped",
-         rating: 8, // Escala 1-10 (4 estrellas = 8/10)
-         isFavorite: true/false,
-         episodesWatched: 12,
-         logDate: "2026-10-24",
-         review: "Texto",
-         updatedAt: 1672531199
-       }
-    */
+    let currentAnime = null;
+    let selectedRating = 0;
+    let isFavorite = false;
+    const STORAGE_KEY = 'fps24_anime_data';
+    const CACHE_KEY = 'fps24_trending_cache';
+    const CACHE_TIME_KEY = 'fps24_trending_time';
 
-    let currentSelectedAnime = null; // Anime temporal para modales
-    let tempLogIsFavorite = false;
-    let currentLibraryFilter = 'all';
-
-    // Cargar datos al iniciar
-    function loadStorage() {
-      try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        if (data) {
-          userLibrary = JSON.parse(data);
-        }
-      } catch (err) {
-        console.error("Error al cargar localStorage:", err);
-        userLibrary = {};
-      }
-      updateLibraryBadge();
+    function getStoredData() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     }
 
-    function saveStorage() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userLibrary));
-        updateLibraryBadge();
-      } catch (err) {
-        showToast("Error al guardar en almacenamiento local", true);
-      }
+    function saveStoredData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
-    function updateLibraryBadge() {
-      const count = Object.keys(userLibrary).length;
-      const badge = document.getElementById('badge-library-count');
-      if (badge) badge.textContent = count;
-    }
-
-    /* ==========================================================
-       NAVEGACIÓN ENTRE PESTAÑAS
-       ========================================================== */
-    function switchTab(tabId) {
-      const tabs = ['explore', 'library', 'diary', 'stats'];
-      tabs.forEach(t => {
-        const view = document.getElementById(`view-${t}`);
-        const navBtn = document.getElementById(`nav-btn-${t}`);
-        const mobBtn = document.getElementById(`mob-btn-${t}`);
-        
-        if (t === tabId) {
-          view.classList.remove('hidden');
-          if (navBtn) {
-            navBtn.classList.remove('text-slate-400');
-            navBtn.classList.add('text-white', 'bg-surface-700');
-          }
-          if (mobBtn) {
-            mobBtn.classList.remove('text-slate-400');
-            mobBtn.classList.add('text-brand-accent');
-          }
-        } else {
-          view.classList.add('hidden');
-          if (navBtn) {
-            navBtn.classList.add('text-slate-400');
-            navBtn.classList.remove('text-white', 'bg-surface-700');
-          }
-          if (mobBtn) {
-            mobBtn.classList.add('text-slate-400');
-            mobBtn.classList.remove('text-brand-accent');
-          }
-        }
+    // Consulta directa GraphQL a AniList
+    async function fetchAniList(query, variables) {
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query, variables })
       });
-
-      // Refrescar vistas específicas al entrar
-      if (tabId === 'library') renderLibrary();
-      if (tabId === 'diary') renderDiary();
-      if (tabId === 'stats') renderStats();
+      const json = await response.json();
+      return json.data;
     }
 
-    /* ==========================================================
-       CONSUMO DE JIKAN API (V4)
-       ========================================================== */
-    const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
-    let searchTimeout = null;
+    // Carga rápida con caché inmediato
+    async function loadTrendingAnimes() {
+      const grid = document.getElementById('animeGrid');
+      const badge = document.getElementById('cacheBadge');
+      
+      const cached = localStorage.getItem(CACHE_KEY);
+      const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+      // Válido por 12 horas para ahorrar batería y datos móviles
+      const isFresh = cacheTime && (Date.now() - parseInt(cacheTime) < 12 * 60 * 60 * 1000);
 
-    async function loadTopAnime() {
-      const loader = document.getElementById('explore-loader');
-      const grid = document.getElementById('explore-grid');
-      const title = document.getElementById('search-section-title');
-      const count = document.getElementById('results-count');
-
-      title.innerHTML = `<i class="fa-solid fa-fire text-brand-orange"></i> Animes Más Populares`;
-      loader.classList.remove('hidden');
-      grid.innerHTML = '';
-
-      try {
-        const response = await fetch(`${JIKAN_BASE_URL}/top/anime?limit=18&filter=bypopularity`);
-        if (!response.ok) throw new Error("API rate limit o error");
-        const data = await response.json();
-        renderAnimeGrid(data.data || [], 'explore-grid');
-        count.textContent = `${data.data.length} animes cargados`;
-      } catch (err) {
-        grid.innerHTML = `
-          <div class="col-span-full py-12 text-center text-slate-400">
-            <p class="text-amber-400 mb-2">No se pudieron cargar los datos de Jikan API.</p>
-            <p class="text-xs">Por favor, espera unos segundos e intenta nuevamente (límite de peticiones de Jikan).</p>
-            <button onclick="loadTopAnime()" class="mt-3 px-4 py-2 bg-surface-800 rounded-lg text-xs font-semibold hover:bg-surface-700">Reintentar</button>
-          </div>
-        `;
-      } finally {
-        loader.classList.add('hidden');
+      // Si existe caché, lo pinta de inmediato (0ms)
+      if (cached) {
+        renderGrid(JSON.parse(cached), grid);
+        badge.classList.remove('hidden');
+        if (isFresh) return;
       }
-    }
 
-    async function performSearch(query) {
-      if (!query || query.trim() === '') return;
-      const loader = document.getElementById('explore-loader');
-      const grid = document.getElementById('explore-grid');
-      const title = document.getElementById('search-section-title');
-      const count = document.getElementById('results-count');
-
-      title.innerHTML = `<i class="fa-solid fa-magnifying-glass text-brand-accent"></i> Resultados para: "${escapeHtml(query)}"`;
-      loader.classList.remove('hidden');
-      grid.innerHTML = '';
-
-      try {
-        const response = await fetch(`${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=24&sfw=true`);
-        if (!response.ok) throw new Error("API error");
-        const data = await response.json();
-        const results = data.data || [];
-        
-        if (results.length === 0) {
-          grid.innerHTML = `
-            <div class="col-span-full py-16 text-center text-slate-400">
-              <i class="fa-solid fa-ghost text-4xl mb-3 text-slate-600"></i>
-              <p class="text-sm">No encontramos ningún anime llamado "${escapeHtml(query)}"</p>
-            </div>
-          `;
-          count.textContent = "0 resultados";
-        } else {
-          renderAnimeGrid(results, 'explore-grid');
-          count.textContent = `${results.length} resultados`;
+      const query = `
+        query {
+          Page(page: 1, perPage: 24) {
+            media(sort: TRENDING_DESC, type: ANIME) {
+              id
+              title { romaji english native }
+              coverImage { extraLarge large }
+              episodes
+              seasonYear
+              genres
+              description(asHtml: false)
+            }
+          }
         }
-      } catch (err) {
-        grid.innerHTML = `
-          <div class="col-span-full py-12 text-center text-slate-400">
-            <p class="text-amber-400 mb-2">Ocurrió un error al buscar.</p>
-            <p class="text-xs">Por favor reintenta en breve.</p>
-          </div>
-        `;
-      } finally {
-        loader.classList.add('hidden');
+      `;
+
+      try {
+        const data = await fetchAniList(query, {});
+        const animes = data.Page.media;
+        localStorage.setItem(CACHE_KEY, JSON.stringify(animes));
+        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        renderGrid(animes, grid);
+        badge.classList.remove('hidden');
+      } catch (e) {
+        if (!cached) {
+          grid.innerHTML = '<p class="col-span-3 text-xs text-red-400 py-10 text-center">No se pudo cargar la lista. Comprueba tu conexión.</p>';
+        }
       }
     }
 
-    function handleSearch(e) {
-      e.preventDefault();
-      const val = document.getElementById('search-input').value.trim();
-      if (val) performSearch(val);
+    // Buscador
+    async function executeSearch() {
+      const input = document.getElementById('searchInput').value.trim();
+      const grid = document.getElementById('animeGrid');
+      const title = document.getElementById('sectionTitle');
+      const badge = document.getElementById('cacheBadge');
+
+      if (!input) {
+        title.innerText = "Recomendados y Populares";
+        loadTrendingAnimes();
+        return;
+      }
+
+      badge.classList.add('hidden');
+      title.innerText = `Resultados para "${input}"`;
+      grid.innerHTML = '<p class="col-span-3 text-xs text-gray-500 py-8 text-center">Buscando...</p>';
+
+      const query = `
+        query ($search: String) {
+          Page(page: 1, perPage: 24) {
+            media(search: $search, type: ANIME) {
+              id
+              title { romaji english }
+              coverImage { extraLarge large }
+              episodes
+              seasonYear
+              genres
+              description(asHtml: false)
+            }
+          }
+        }
+      `;
+
+      try {
+        const data = await fetchAniList(query, { search: input });
+        renderGrid(data.Page.media, grid);
+      } catch (err) {
+        grid.innerHTML = '<p class="col-span-3 text-xs text-red-400 py-8 text-center">Sin resultados.</p>';
+      }
     }
 
-    function quickSearch(title) {
-      document.getElementById('search-input').value = title;
-      performSearch(title);
-    }
-
-    /* Renderizar Tarjetas de Anime */
-    function renderAnimeGrid(animeList, containerId) {
-      const container = document.getElementById(containerId);
+    function renderGrid(animes, container) {
       container.innerHTML = '';
+      if (!animes || animes.length === 0) {
+        container.innerHTML = '<p class="col-span-3 text-xs text-gray-500 py-8 text-center">No se encontraron series.</p>';
+        return;
+      }
 
-      animeList.forEach(anime => {
-        const isLogged = !!userLibrary[anime.mal_id];
-        const userItem = userLibrary[anime.mal_id];
-        const posterImg = anime.images?.webp?.large_image_url || anime.images?.jpg?.large_image_url || 'https://placehold.co/300x450/1b2228/8899a6?text=No+Poster';
-        const title = anime.title || anime.title_english || 'Sin título';
-        const year = anime.year || (anime.aired?.from ? new Date(anime.aired.from).getFullYear() : 'N/A');
+      const userData = getStoredData();
+
+      animes.forEach(anime => {
+        const title = anime.title.english || anime.title.romaji;
+        const entry = userData[anime.id];
 
         const card = document.createElement('div');
-        card.className = "group relative bg-surface-900 border border-surface-800 rounded-xl overflow-hidden hover:border-surface-600 transition-all duration-200 flex flex-col poster-glow cursor-pointer";
-        
-        // Formatear estrellas para tarjeta
-        let userRatingBadge = '';
-        if (isLogged && userItem.rating > 0) {
-          userRatingBadge = `
-            <div class="absolute top-2 right-2 bg-surface-950/85 backdrop-blur-md px-1.5 py-0.5 rounded text-[11px] font-mono text-brand-orange border border-surface-700/80 flex items-center gap-1 shadow">
-              <i class="fa-solid fa-star text-[10px]"></i> ${(userItem.rating / 2).toFixed(1)}
-            </div>
-          `;
-        }
-
-        let heartBadge = '';
-        if (isLogged && userItem.isFavorite) {
-          heartBadge = `
-            <div class="absolute top-2 left-2 bg-rose-950/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[11px] text-rose-400 border border-rose-900 flex items-center gap-1">
-              <i class="fa-solid fa-heart"></i>
-            </div>
-          `;
-        }
-
-        let statusIndicator = '';
-        if (isLogged) {
-          const statusColors = {
-            watching: 'bg-emerald-500',
-            completed: 'bg-brand-blue',
-            plan_to_watch: 'bg-amber-500',
-            dropped: 'bg-rose-500'
-          };
-          const colorClass = statusColors[userItem.status] || 'bg-slate-500';
-          statusIndicator = `<div class="h-1 w-full ${colorClass}"></div>`;
-        }
+        card.className = 'poster-glow relative cursor-pointer group';
+        card.onclick = () => openModal(anime);
 
         card.innerHTML = `
-          <div class="relative aspect-[2/3] w-full overflow-hidden bg-surface-950">
-            <img src="${posterImg}" alt="${escapeHtml(title)}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
-            <div class="absolute inset-0 bg-gradient-to-t from-surface-950 via-transparent opacity-0 group-hover:opacity-60 transition-opacity"></div>
-            ${userRatingBadge}
-            ${heartBadge}
+          <div class="aspect-[2/3] bg-gray-900 rounded-lg overflow-hidden border border-gray-800 relative shadow-sm">
+            <img src="${anime.coverImage.large || anime.coverImage.extraLarge}" loading="lazy" class="w-full h-full object-cover">
+            ${entry && entry.rating ? `
+              <div class="absolute bottom-1 right-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] text-amber-400 font-bold flex items-center gap-0.5">
+                ★ ${entry.rating}
+              </div>
+            ` : ''}
+            ${entry && entry.favorite ? `
+              <div class="absolute top-1 right-1 text-rose-500 drop-shadow">♥</div>
+            ` : ''}
           </div>
-          ${statusIndicator}
-          <div class="p-3 flex flex-col flex-grow justify-between">
-            <div>
-              <h3 class="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-tight group-hover:text-brand-accent transition-colors" title="${escapeHtml(title)}">
-                ${escapeHtml(title)}
-              </h3>
-              <p class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
-                <span>${year}</span>
-                <span class="font-mono text-slate-500">${anime.episodes ? `${anime.episodes} eps` : 'En emisión'}</span>
-              </p>
-            </div>
-
-            <!-- Botón 1-clic rápido agregar/modificar -->
-            <button 
-              onclick="event.stopPropagation(); quickAddOrEdit(${anime.mal_id})" 
-              class="mt-3 w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${isLogged ? 'bg-surface-800 text-brand-accent border border-surface-700 hover:bg-surface-700' : 'bg-surface-800 hover:bg-brand-accent hover:text-surface-950 text-slate-300'}">
-              <i class="fa-solid ${isLogged ? 'fa-check' : 'fa-plus'} text-[10px]"></i>
-              <span>${isLogged ? 'En Biblioteca' : '+ Agregar'}</span>
-            </button>
-          </div>
+          <p class="text-[11px] font-semibold text-gray-200 mt-1.5 line-clamp-2 leading-tight">${title}</p>
         `;
-
-        card.onclick = () => openAnimeDetail(anime);
         container.appendChild(card);
       });
     }
 
-    /* ==========================================================
-       MODAL DE DETALLE
-       ========================================================== */
-    function openAnimeDetail(anime) {
-      currentSelectedAnime = anime;
-      const isLogged = !!userLibrary[anime.mal_id];
-      const userItem = userLibrary[anime.mal_id];
+    function openModal(anime) {
+      currentAnime = anime;
+      const userData = getStoredData();
+      const entry = userData[anime.id] || { status: 'WATCHING', rating: 0, favorite: false, review: '' };
 
-      document.getElementById('detail-poster').src = anime.images?.webp?.large_image_url || anime.images?.jpg?.large_image_url || '';
-      document.getElementById('detail-title').textContent = anime.title || 'Sin título';
-      document.getElementById('detail-title-jp').textContent = anime.title_japanese || '';
-      document.getElementById('detail-year').textContent = anime.year || (anime.aired?.from ? new Date(anime.aired.from).getFullYear() : 'N/A');
-      document.getElementById('detail-type').textContent = anime.type || 'Anime';
-      document.getElementById('detail-episodes').textContent = anime.episodes ? `${anime.episodes} eps` : 'Eps desconocidos';
-      document.getElementById('detail-mal-score').innerHTML = `<i class="fa-solid fa-star"></i> <span>${anime.score || 'N/A'}</span> MAL`;
-      document.getElementById('detail-synopsis').textContent = anime.synopsis || 'Sin descripción disponible para este anime.';
+      const title = anime.title.english || anime.title.romaji;
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalPoster').src = anime.coverImage.large || anime.coverImage.extraLarge;
+      document.getElementById('modalYear').innerText = anime.seasonYear ? `Año: ${anime.seasonYear}` : 'Año: N/A';
+      document.getElementById('modalEpisodes').innerText = anime.episodes ? `${anime.episodes} episodios` : 'Episodios por confirmar';
+      document.getElementById('modalGenres').innerText = (anime.genres || []).slice(0, 3).join(' • ');
+      document.getElementById('modalSynopsis').innerText = anime.description ? anime.description.replace(/<[^>]*>?/gm, '') : 'Sin sinopsis disponible.';
 
-      // Géneros
-      const genresContainer = document.getElementById('detail-genres');
-      genresContainer.innerHTML = '';
-      const genresList = anime.genres ? anime.genres.map(g => g.name) : [];
-      genresList.forEach(g => {
-        const tag = document.createElement('span');
-        tag.className = "text-[11px] px-2 py-0.5 rounded-full bg-surface-800 text-slate-300 border border-surface-700";
-        tag.textContent = g;
-        genresContainer.appendChild(tag);
-      });
+      document.getElementById('entryStatus').value = entry.status;
+      document.getElementById('entryReview').value = entry.review || '';
+      selectedRating = entry.rating || 0;
+      isFavorite = entry.favorite || false;
 
-      // User Record Preview
-      const recordBox = document.getElementById('detail-user-record');
-      const logBtnText = document.getElementById('detail-log-btn-text');
-      const heartIcon = document.getElementById('detail-heart-icon');
+      updateStars();
+      updateFavoriteBtn();
 
-      if (isLogged) {
-        recordBox.classList.remove('hidden');
-        logBtnText.textContent = "Editar mi Log / Reseña";
-        
-        const statusMap = {
-          watching: 'Viendo',
-          completed: 'Completado',
-          plan_to_watch: 'Por Ver',
-          dropped: 'Abandonado'
-        };
-        document.getElementById('detail-user-status').textContent = statusMap[userItem.status] || userItem.status;
-        document.getElementById('detail-user-stars').innerHTML = renderStarsHTML(userItem.rating);
-        document.getElementById('detail-user-progress').textContent = `Episodios: ${userItem.episodesWatched || 0} / ${anime.episodes || '?'}`;
-        document.getElementById('detail-user-date').textContent = userItem.logDate ? `Fecha: ${userItem.logDate}` : '';
-        
-        const revElem = document.getElementById('detail-user-review');
-        if (userItem.review && userItem.review.trim()) {
-          revElem.textContent = `“${userItem.review}”`;
-          revElem.classList.remove('hidden');
-        } else {
-          revElem.classList.add('hidden');
-        }
-
-        if (userItem.isFavorite) {
-          heartIcon.className = "fa-solid fa-heart text-rose-500";
-        } else {
-          heartIcon.className = "fa-regular fa-heart";
-        }
+      const deleteBtn = document.getElementById('deleteEntryBtn');
+      if (userData[anime.id]) {
+        deleteBtn.classList.remove('hidden');
       } else {
-        recordBox.classList.add('hidden');
-        logBtnText.textContent = "+ Registrar en Colección";
-        heartIcon.className = "fa-regular fa-heart";
+        deleteBtn.classList.add('hidden');
       }
 
-      openModal('modal-detail');
+      document.getElementById('detailModal').classList.remove('hidden');
     }
 
-    function toggleFavoriteFromDetail() {
-      if (!currentSelectedAnime) return;
-      const id = currentSelectedAnime.mal_id;
-      
-      if (!userLibrary[id]) {
-        // Si no existe, crear registro base
-        quickAddAnime(currentSelectedAnime, 'plan_to_watch');
-      }
-      userLibrary[id].isFavorite = !userLibrary[id].isFavorite;
-      saveStorage();
-      
-      const heartIcon = document.getElementById('detail-heart-icon');
-      heartIcon.className = userLibrary[id].isFavorite ? "fa-solid fa-heart text-rose-500" : "fa-regular fa-heart";
-      showToast(userLibrary[id].isFavorite ? "Añadido a Favoritos ❤️" : "Quitado de Favoritos");
-      
-      // Actualizar vista activa si es biblioteca
-      if (!document.getElementById('view-library').classList.contains('hidden')) {
-        renderLibrary();
-      }
+    function closeModal() {
+      document.getElementById('detailModal').classList.add('hidden');
+      currentAnime = null;
     }
 
-    function openLogModalFromDetail() {
-      closeModal('modal-detail');
-      openLogModal(currentSelectedAnime);
+    function setRating(val) {
+      selectedRating = selectedRating === val ? 0 : val;
+      updateStars();
     }
 
-    /* ==========================================================
-       MODAL DE LOGGING & DIARIO (ESTILO LETTERBOXD)
-       ========================================================== */
-    function openLogModal(anime) {
-      currentSelectedAnime = anime;
-      const id = anime.mal_id;
-      const userItem = userLibrary[id] || {};
-
-      document.getElementById('log-anime-id').value = id;
-      document.getElementById('log-anime-title').textContent = anime.title || 'Anime';
-      document.getElementById('log-anime-meta').textContent = `${anime.type || 'TV'} • ${anime.episodes ? anime.episodes + ' eps' : 'Episodios por determinar'}`;
-      document.getElementById('log-thumb').src = anime.images?.webp?.image_url || anime.images?.jpg?.image_url || '';
-      document.getElementById('log-episodes-total').textContent = anime.episodes || '?';
-
-      // Rellenar con valores existentes o por defecto
-      document.getElementById('log-status').value = userItem.status || 'watching';
-      document.getElementById('log-episodes-watched').value = userItem.episodesWatched !== undefined ? userItem.episodesWatched : 0;
-      document.getElementById('log-episodes-watched').max = anime.episodes || 9999;
-      
-      // Fecha: hoy por defecto si está vacío
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('log-watched-date').value = userItem.logDate || today;
-      document.getElementById('log-review').value = userItem.review || '';
-
-      // Favorito
-      tempLogIsFavorite = !!userItem.isFavorite;
-      updateLogFavoriteButton();
-
-      // Rating (Escala 1 a 10 interna = 0.5 a 5 estrellas)
-      setStarScore(userItem.rating || 0);
-
-      // Botón borrar
-      const btnDelete = document.getElementById('btn-delete-log');
-      if (userLibrary[id]) {
-        btnDelete.classList.remove('hidden');
-      } else {
-        btnDelete.classList.add('hidden');
-      }
-
-      openModal('modal-log');
-    }
-
-    function setStarScore(scoreVal) {
-      // scoreVal va de 0 a 10 (0 estrellas a 5 estrellas)
-      document.getElementById('log-rating-value').value = scoreVal;
-      const display = document.getElementById('star-score-display');
-      
-      if (scoreVal === 0) {
-        display.textContent = "Sin calificar";
-      } else {
-        const stars = (scoreVal / 2).toFixed(1);
-        display.innerHTML = `<i class="fa-solid fa-star text-amber-400"></i> ${stars} / 5.0`;
-      }
-
-      renderInteractiveStars(scoreVal);
-    }
-
-    function renderInteractiveStars(currentScore) {
-      const container = document.getElementById('star-rating-container');
+    function updateStars() {
+      const container = document.getElementById('starContainer');
       container.innerHTML = '';
-
-      // Generar 5 estrellas, cada una con clic izquierdo (media) y clic derecho/total (entera)
-      for (let starIdx = 1; starIdx <= 5; starIdx++) {
-        const starFullVal = starIdx * 2;
-        const starHalfVal = starFullVal - 1;
-
-        const starWrapper = document.createElement('span');
-        starWrapper.className = "relative inline-block cursor-pointer px-1 py-0.5 hover:scale-110 transition-transform";
-        
-        let iconClass = "fa-regular fa-star text-slate-600";
-        if (currentScore >= starFullVal) {
-          iconClass = "fa-solid fa-star text-amber-400";
-        } else if (currentScore >= starHalfVal) {
-          iconClass = "fa-solid fa-star-half-stroke text-amber-400";
-        }
-
-        starWrapper.innerHTML = `<i class="${iconClass}"></i>`;
-
-        // Al hacer clic, alternar entre medio y completo
-        starWrapper.onclick = () => {
-          if (currentScore === starFullVal) {
-            setStarScore(starHalfVal);
-          } else if (currentScore === starHalfVal) {
-            setStarScore(0); // Quitar si vuelve a presionar
-          } else {
-            setStarScore(starFullVal);
-          }
-        };
-
-        container.appendChild(starWrapper);
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement('span');
+        star.innerText = i <= selectedRating ? '★' : '☆';
+        star.onclick = () => setRating(i);
+        container.appendChild(star);
       }
     }
 
-    function toggleLogFavoriteState() {
-      tempLogIsFavorite = !tempLogIsFavorite;
-      updateLogFavoriteButton();
+    function toggleLike() {
+      isFavorite = !isFavorite;
+      updateFavoriteBtn();
     }
 
-    function updateLogFavoriteButton() {
-      const icon = document.getElementById('log-heart-icon');
-      const btn = document.getElementById('log-favorite-btn');
-      if (tempLogIsFavorite) {
-        icon.className = "fa-solid fa-heart text-rose-500";
-        btn.classList.add('border-rose-900', 'bg-rose-950/40');
+    function updateFavoriteBtn() {
+      const btn = document.getElementById('likeBtn');
+      if (isFavorite) {
+        btn.classList.add('text-rose-500', 'border-rose-900/50');
+        btn.classList.remove('text-gray-500', 'border-gray-800');
       } else {
-        icon.className = "fa-solid fa-heart text-slate-500";
-        btn.classList.remove('border-rose-900', 'bg-rose-950/40');
+        btn.classList.remove('text-rose-500', 'border-rose-900/50');
+        btn.classList.add('text-gray-500', 'border-gray-800');
       }
     }
 
-    function saveLogEntry(e) {
-      e.preventDefault();
-      if (!currentSelectedAnime) return;
+    function saveCurrentEntry() {
+      if (!currentAnime) return;
+      const data = getStoredData();
 
-      const id = currentSelectedAnime.mal_id;
-      const status = document.getElementById('log-status').value;
-      const episodesWatched = parseInt(document.getElementById('log-episodes-watched').value) || 0;
-      const rating = parseInt(document.getElementById('log-rating-value').value) || 0;
-      const logDate = document.getElementById('log-watched-date').value;
-      const review = document.getElementById('log-review').value.trim();
-
-      // Guardar objeto normalizado
-      userLibrary[id] = {
-        mal_id: id,
-        title: currentSelectedAnime.title || 'Sin título',
-        title_japanese: currentSelectedAnime.title_japanese || '',
-        image_url: currentSelectedAnime.images?.webp?.large_image_url || currentSelectedAnime.images?.jpg?.large_image_url || '',
-        episodes: currentSelectedAnime.episodes || 0,
-        genres: currentSelectedAnime.genres ? currentSelectedAnime.genres.map(g => g.name) : [],
-        year: currentSelectedAnime.year || (currentSelectedAnime.aired?.from ? new Date(currentSelectedAnime.aired.from).getFullYear() : null),
-        synopsis: currentSelectedAnime.synopsis || '',
-        type: currentSelectedAnime.type || 'TV',
-        // Campos de usuario
-        status: status,
-        rating: rating,
-        isFavorite: tempLogIsFavorite,
-        episodesWatched: episodesWatched,
-        logDate: logDate,
-        review: review,
-        updatedAt: Date.now()
+      data[currentAnime.id] = {
+        id: currentAnime.id,
+        title: currentAnime.title,
+        coverImage: currentAnime.coverImage,
+        episodes: currentAnime.episodes,
+        seasonYear: currentAnime.seasonYear,
+        genres: currentAnime.genres,
+        status: document.getElementById('entryStatus').value,
+        rating: selectedRating,
+        favorite: isFavorite,
+        review: document.getElementById('entryReview').value.trim(),
+        updatedAt: new Date().toISOString()
       };
 
-      saveStorage();
-      closeModal('modal-log');
-      showToast(`¡"${userLibrary[id].title}" guardado en tu colección!`);
-
-      // Refrescar vistas
-      renderLibrary();
-      renderDiary();
-      renderStats();
+      saveStoredData(data);
+      closeModal();
+      refreshActiveViews();
     }
 
-    function deleteLogEntry() {
-      if (!currentSelectedAnime) return;
-      const id = currentSelectedAnime.mal_id;
-      if (userLibrary[id]) {
-        delete userLibrary[id];
-        saveStorage();
-        closeModal('modal-log');
-        showToast("Eliminado de tu biblioteca");
-        renderLibrary();
-        renderDiary();
-        renderStats();
-      }
-    }
-
-    function quickAddOrEdit(animeId) {
-      // Si ya existe en biblioteca, abrir modal de edición
-      if (userLibrary[animeId]) {
-        openLogModal(userLibrary[animeId]);
-        return;
-      }
-
-      // Si no existe, buscar en resultados cacheados o pedir detalle rápido
-      fetch(`${JIKAN_BASE_URL}/anime/${animeId}`)
-        .then(res => res.json())
-        .then(res => {
-          if (res.data) {
-            quickAddAnime(res.data, 'watching');
-            showToast(`Añadido a "Viendo"`);
-          }
-        })
-        .catch(() => {
-          showToast("No se pudo agregar rápido, intenta abrir su ficha", true);
-        });
-    }
-
-    function quickAddAnime(animeData, defaultStatus = 'watching') {
-      const id = animeData.mal_id;
-      userLibrary[id] = {
-        mal_id: id,
-        title: animeData.title || 'Sin título',
-        title_japanese: animeData.title_japanese || '',
-        image_url: animeData.images?.webp?.large_image_url || animeData.images?.jpg?.large_image_url || '',
-        episodes: animeData.episodes || 0,
-        genres: animeData.genres ? animeData.genres.map(g => g.name) : [],
-        year: animeData.year || (animeData.aired?.from ? new Date(animeData.aired.from).getFullYear() : null),
-        synopsis: animeData.synopsis || '',
-        type: animeData.type || 'TV',
-        status: defaultStatus,
-        rating: 0,
-        isFavorite: false,
-        episodesWatched: 0,
-        logDate: new Date().toISOString().split('T')[0],
-        review: '',
-        updatedAt: Date.now()
-      };
-      saveStorage();
-      renderLibrary();
-      renderStats();
-    }
-
-    /* ==========================================================
-       RENDERIZADO DE LA BIBLIOTECA
-       ========================================================== */
-    function setLibraryFilter(status) {
-      currentLibraryFilter = status;
-      document.querySelectorAll('.lib-filter-btn').forEach(b => {
-        if (b.getAttribute('data-status') === status) {
-          b.className = "lib-filter-btn px-3 py-1.5 rounded-lg bg-surface-700 text-white";
-        } else {
-          b.className = "lib-filter-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white";
-        }
-      });
-      renderLibrary();
+    function deleteCurrentEntry() {
+      if (!currentAnime) return;
+      const data = getStoredData();
+      delete data[currentAnime.id];
+      saveStoredData(data);
+      closeModal();
+      refreshActiveViews();
     }
 
     function renderLibrary() {
-      const grid = document.getElementById('library-grid');
-      const emptyState = document.getElementById('library-empty');
-      const sortType = document.getElementById('library-sort').value;
-      grid.innerHTML = '';
+      const filter = document.getElementById('statusFilter').value;
+      const data = getStoredData();
+      const grid = document.getElementById('libraryGrid');
+      const empty = document.getElementById('emptyLibrary');
 
-      let list = Object.values(userLibrary);
-
-      // Filtrar
-      if (currentLibraryFilter === 'favorites') {
-        list = list.filter(item => item.isFavorite);
-      } else if (currentLibraryFilter !== 'all') {
-        list = list.filter(item => item.status === currentLibraryFilter);
+      let list = Object.values(data);
+      if (filter !== 'ALL') {
+        list = list.filter(item => item.status === filter);
       }
 
       if (list.length === 0) {
-        emptyState.classList.remove('hidden');
-        return;
-      } else {
-        emptyState.classList.add('hidden');
-      }
-
-      // Ordenar
-      list.sort((a, b) => {
-        if (sortType === 'recent') return (b.updatedAt || 0) - (a.updatedAt || 0);
-        if (sortType === 'rating_desc') return (b.rating || 0) - (a.rating || 0);
-        if (sortType === 'title_asc') return (a.title || '').localeCompare(b.title || '');
-        if (sortType === 'episodes_desc') return (b.episodes || 0) - (a.episodes || 0);
-        return 0;
-      });
-
-      // Crear tarjetas
-      list.forEach(anime => {
-        const card = document.createElement('div');
-        card.className = "group relative bg-surface-900 border border-surface-800 rounded-xl overflow-hidden hover:border-surface-600 transition-all duration-200 flex flex-col poster-glow cursor-pointer";
-        
-        const ratingBadge = anime.rating > 0 ? `
-          <div class="absolute top-2 right-2 bg-surface-950/85 backdrop-blur-md px-1.5 py-0.5 rounded text-[11px] font-mono text-brand-orange border border-surface-700/80 flex items-center gap-1 shadow">
-            <i class="fa-solid fa-star text-[10px]"></i> ${(anime.rating / 2).toFixed(1)}
-          </div>
-        ` : '';
-
-        const heartBadge = anime.isFavorite ? `
-          <div class="absolute top-2 left-2 bg-rose-950/85 backdrop-blur-md px-1.5 py-0.5 rounded text-[11px] text-rose-400 border border-rose-900 flex items-center gap-1">
-            <i class="fa-solid fa-heart"></i>
-          </div>
-        ` : '';
-
-        const statusColors = {
-          watching: 'bg-emerald-500',
-          completed: 'bg-brand-blue',
-          plan_to_watch: 'bg-amber-500',
-          dropped: 'bg-rose-500'
-        };
-
-        const statusNames = {
-          watching: 'Viendo',
-          completed: 'Visto',
-          plan_to_watch: 'Por Ver',
-          dropped: 'Abandonado'
-        };
-
-        card.innerHTML = `
-          <div class="relative aspect-[2/3] w-full overflow-hidden bg-surface-950">
-            <img src="${anime.image_url}" alt="${escapeHtml(anime.title)}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
-            ${ratingBadge}
-            ${heartBadge}
-          </div>
-          <div class="h-1 w-full ${statusColors[anime.status] || 'bg-slate-500'}"></div>
-          <div class="p-3 flex flex-col flex-grow justify-between">
-            <div>
-              <h3 class="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-tight group-hover:text-brand-accent transition-colors">
-                ${escapeHtml(anime.title)}
-              </h3>
-              <p class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
-                <span>${statusNames[anime.status] || anime.status}</span>
-                <span class="font-mono text-slate-500">${anime.episodesWatched || 0}/${anime.episodes || '?'} ep</span>
-              </p>
-            </div>
-            <button 
-              onclick="event.stopPropagation(); openLogModal(userLibrary[${anime.mal_id}])" 
-              class="mt-3 w-full py-1.5 rounded-lg text-xs font-semibold bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-pen text-[10px]"></i> Editar Log
-            </button>
-          </div>
-        `;
-
-        card.onclick = () => {
-          // Adaptar formato a lo que espera detail
-          const pseudoAnime = {
-            mal_id: anime.mal_id,
-            title: anime.title,
-            title_japanese: anime.title_japanese,
-            images: { webp: { large_image_url: anime.image_url, image_url: anime.image_url } },
-            year: anime.year,
-            type: anime.type,
-            episodes: anime.episodes,
-            genres: anime.genres ? anime.genres.map(g => ({ name: g })) : [],
-            synopsis: anime.synopsis
-          };
-          openAnimeDetail(pseudoAnime);
-        };
-
-        grid.appendChild(card);
-      });
-    }
-
-    /* ==========================================================
-       RENDERIZADO DEL DIARIO / LOGS (ESTILO LETTERBOXD)
-       ========================================================== */
-    function renderDiary() {
-      const timeline = document.getElementById('diary-timeline');
-      const empty = document.getElementById('diary-empty');
-      timeline.innerHTML = '';
-
-      // Animes que tengan fecha de log o reseña
-      const logs = Object.values(userLibrary).filter(item => item.logDate || (item.review && item.review.trim()));
-
-      if (logs.length === 0) {
+        grid.innerHTML = '';
         empty.classList.remove('hidden');
         return;
-      } else {
-        empty.classList.add('hidden');
       }
 
-      // Ordenar por fecha cronológica inversa
-      logs.sort((a, b) => new Date(b.logDate || 0) - new Date(a.logDate || 0));
+      empty.classList.add('hidden');
+      renderGrid(list, grid);
+    }
 
-      logs.forEach(entry => {
-        const entryCard = document.createElement('div');
-        entryCard.className = "bg-surface-900 border border-surface-800 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start hover:border-surface-700 transition";
+    function renderDiary() {
+      const data = getStoredData();
+      const list = Object.values(data)
+        .filter(i => i.review || i.rating)
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-        const formattedDate = entry.logDate ? new Date(entry.logDate + 'T00:00:00').toLocaleDateString('es-ES', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        }) : 'Sin fecha';
+      const container = document.getElementById('diaryList');
+      const empty = document.getElementById('emptyDiary');
 
-        entryCard.innerHTML = `
-          <!-- Poster mini -->
-          <img src="${entry.image_url}" alt="${escapeHtml(entry.title)}" class="w-16 sm:w-20 aspect-[2/3] object-cover rounded-lg border border-surface-700 shadow-md flex-shrink-0 cursor-pointer" onclick="openLogModal(userLibrary[${entry.mal_id}])" />
+      if (list.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
 
-          <!-- Contenido del log -->
-          <div class="flex-grow space-y-2">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <h3 class="text-base font-bold text-white hover:text-brand-accent transition cursor-pointer" onclick="openLogModal(userLibrary[${entry.mal_id}])">
-                  ${escapeHtml(entry.title)}
-                </h3>
-                ${entry.year ? `<span class="text-xs text-slate-400 font-mono">(${entry.year})</span>` : ''}
-              </div>
+      empty.classList.add('hidden');
+      container.innerHTML = '';
 
-              <!-- Fecha estilo diario -->
-              <span class="text-xs font-mono font-medium text-slate-400 bg-surface-800 px-2 py-1 rounded-md border border-surface-700">
-                <i class="fa-regular fa-calendar text-brand-accent mr-1"></i> ${formattedDate}
-              </span>
+      list.forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'bg-[#14181d] border border-gray-800/80 rounded-xl p-3 flex gap-3 cursor-pointer';
+        item.onclick = () => openModal(entry);
+
+        const stars = entry.rating ? '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating) : '';
+        const dateStr = new Date(entry.updatedAt).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+
+        item.innerHTML = `
+          <img src="${entry.coverImage.large}" class="w-14 h-20 object-cover rounded-md border border-gray-800">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-white line-clamp-1">${entry.title.english || entry.title.romaji}</h4>
+              <span class="text-[10px] text-gray-500">${dateStr}</span>
             </div>
-
-            <!-- Calificación y Like -->
-            <div class="flex items-center gap-3">
-              <div class="text-amber-400 text-sm">
-                ${renderStarsHTML(entry.rating)}
-              </div>
-              ${entry.isFavorite ? '<i class="fa-solid fa-heart text-rose-500 text-sm" title="Favorito"></i>' : ''}
-              <span class="text-xs text-slate-400 font-mono">
-                Episodios vistos: ${entry.episodesWatched || 0}/${entry.episodes || '?'}
-              </span>
-            </div>
-
-            <!-- Reseña si existe -->
-            ${entry.review ? `
-              <p class="text-sm text-slate-300 bg-surface-950/60 p-3 rounded-lg border-l-2 border-brand-accent leading-relaxed italic">
-                "${escapeHtml(entry.review)}"
-              </p>
-            ` : ''}
+            <div class="text-amber-400 text-xs my-0.5">${stars}</div>
+            ${entry.review ? `<p class="text-[11px] text-gray-400 line-clamp-2 italic mt-1">"${entry.review}"</p>` : ''}
           </div>
         `;
-
-        timeline.appendChild(entryCard);
+        container.appendChild(item);
       });
     }
 
-    /* ==========================================================
-       ESTADÍSTICAS
-       ========================================================== */
-    function renderStats() {
-      const items = Object.values(userLibrary);
-      const totalAnime = items.length;
-      
-      let totalEpisodes = 0;
-      let completedCount = 0;
-      let ratedCount = 0;
-      let scoreSum = 0;
-      const genreCounts = {};
-      const statusCounts = { watching: 0, completed: 0, plan_to_watch: 0, dropped: 0 };
+    function switchTab(tab) {
+      document.getElementById('view-explore').classList.add('hidden');
+      document.getElementById('view-library').classList.add('hidden');
+      document.getElementById('view-diary').classList.add('hidden');
 
-      items.forEach(item => {
-        // Episodios
-        const eps = parseInt(item.episodesWatched) || 0;
-        totalEpisodes += eps;
+      document.getElementById('tab-explore').className = 'flex flex-col items-center gap-1 text-gray-500';
+      document.getElementById('tab-library').className = 'flex flex-col items-center gap-1 text-gray-500';
+      document.getElementById('tab-diary').className = 'flex flex-col items-center gap-1 text-gray-500';
 
-        // Estados
-        if (item.status === 'completed') completedCount++;
-        if (statusCounts[item.status] !== undefined) {
-          statusCounts[item.status]++;
-        }
+      document.getElementById(`view-${tab}`).classList.remove('hidden');
+      document.getElementById(`tab-${tab}`).className = 'flex flex-col items-center gap-1 text-[#00e054]';
 
-        // Calificaciones
-        if (item.rating && item.rating > 0) {
-          ratedCount++;
-          scoreSum += (item.rating / 2); // convertir escala 10 a 5 estrellas
-        }
-
-        // Géneros
-        if (Array.isArray(item.genres)) {
-          item.genres.forEach(g => {
-            genreCounts[g] = (genreCounts[g] || 0) + 1;
-          });
-        }
-      });
-
-      const avgScore = ratedCount > 0 ? (scoreSum / ratedCount).toFixed(1) : '0.0';
-      const estimatedHours = Math.round((totalEpisodes * 23) / 60); // promedio de 23 mins por episodio
-
-      document.getElementById('stat-total-anime').textContent = totalAnime;
-      document.getElementById('stat-total-episodes').textContent = totalEpisodes;
-      document.getElementById('stat-total-hours').textContent = `~${estimatedHours} horas de anime`;
-      document.getElementById('stat-completed-count').textContent = completedCount;
-      document.getElementById('stat-avg-score').textContent = `${avgScore} ★`;
-      document.getElementById('stat-avg-stars').innerHTML = renderStarsHTML(Math.round(parseFloat(avgScore) * 2));
-
-      // Desglose de estados
-      const statusContainer = document.getElementById('stats-status-breakdown');
-      statusContainer.innerHTML = '';
-      const statusMeta = [
-        { key: 'watching', label: 'Viendo', color: 'bg-emerald-500' },
-        { key: 'completed', label: 'Completados', color: 'bg-brand-blue' },
-        { key: 'plan_to_watch', label: 'Por Ver', color: 'bg-amber-500' },
-        { key: 'dropped', label: 'Abandonados', color: 'bg-rose-500' }
-      ];
-
-      statusMeta.forEach(sm => {
-        const count = statusCounts[sm.key] || 0;
-        const percent = totalAnime > 0 ? Math.round((count / totalAnime) * 100) : 0;
-        
-        const row = document.createElement('div');
-        row.className = "space-y-1";
-        row.innerHTML = `
-          <div class="flex justify-between text-xs font-semibold">
-            <span class="text-slate-300">${sm.label}</span>
-            <span class="font-mono text-slate-400">${count} (${percent}%)</span>
-          </div>
-          <div class="h-2 w-full bg-surface-800 rounded-full overflow-hidden">
-            <div class="${sm.color} h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
-          </div>
-        `;
-        statusContainer.appendChild(row);
-      });
-
-      // Top Géneros
-      const genresContainer = document.getElementById('stats-genres-container');
-      genresContainer.innerHTML = '';
-      const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-      if (sortedGenres.length === 0) {
-        genresContainer.innerHTML = `<p class="text-xs text-slate-500">No hay suficientes géneros registrados aún.</p>`;
-      } else {
-        const maxGenreVal = sortedGenres[0][1] || 1;
-        sortedGenres.forEach(([genre, count]) => {
-          const pct = Math.round((count / maxGenreVal) * 100);
-          const gRow = document.createElement('div');
-          gRow.className = "space-y-1";
-          gRow.innerHTML = `
-            <div class="flex justify-between text-xs font-semibold">
-              <span class="text-slate-300">${genre}</span>
-              <span class="font-mono text-brand-accent">${count} animes</span>
-            </div>
-            <div class="h-2 w-full bg-surface-800 rounded-full overflow-hidden">
-              <div class="bg-gradient-to-r from-brand-accent to-cyan-400 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-            </div>
-          `;
-          genresContainer.appendChild(gRow);
-        });
-      }
+      if (tab === 'library') renderLibrary();
+      if (tab === 'diary') renderDiary();
     }
 
-    /* ==========================================================
-       RESPALDO: EXPORTAR E IMPORTAR JSON
-       ========================================================== */
+    function refreshActiveViews() {
+      renderLibrary();
+      renderDiary();
+      const currentTab = document.getElementById('view-explore').classList.contains('hidden') ? 
+        (document.getElementById('view-library').classList.contains('hidden') ? 'diary' : 'library') : 'explore';
+      if (currentTab === 'explore') loadTrendingAnimes();
+    }
+
     function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userLibrary, null, 2));
-      const downloadAnchor = document.createElement('a');
-      const dateStr = new Date().toISOString().split('T')[0];
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `AniLog_Backup_${dateStr}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast("¡Copia de respaldo exportada con éxito!");
+      const data = localStorage.getItem(STORAGE_KEY) || '{}';
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `24fps_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
-    function importData(e) {
-      const file = e.target.files[0];
+    function importData(event) {
+      const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = function(event) {
+      reader.onload = (e) => {
         try {
-          const parsed = JSON.parse(event.target.result);
-          if (typeof parsed === 'object' && parsed !== null) {
-            userLibrary = parsed;
-            saveStorage();
-            renderLibrary();
-            renderDiary();
-            renderStats();
-            showToast("Datos importados correctamente ✨");
-          } else {
-            throw new Error("Formato no válido");
-          }
+          JSON.parse(e.target.result);
+          localStorage.setItem(STORAGE_KEY, e.target.result);
+          refreshActiveViews();
+          alert('¡Datos restaurados con éxito en 24FPS!');
         } catch (err) {
-          showToast("El archivo no es un JSON válido de AniLog", true);
+          alert('El archivo seleccionado no es válido.');
         }
       };
       reader.readAsText(file);
-      // Reset input
-      e.target.value = '';
     }
 
-    function clearAllDataPrompt() {
-      const msg = document.createElement('div');
-      // Usamos modal nativo simplificado en UI
-      if (confirm("¿Estás seguro de que deseas borrar todos los registros de tu biblioteca? Te recomendamos exportar un respaldo primero.")) {
-        userLibrary = {};
-        saveStorage();
-        renderLibrary();
-        renderDiary();
-        renderStats();
-        showToast("Todos los registros han sido borrados");
-      }
-    }
-
-    /* ==========================================================
-       HELPERS & UTILIDADES
-       ========================================================= */
-    function renderStarsHTML(score10) {
-      if (!score10 || score10 <= 0) return '<span class="text-slate-600 text-xs">Sin nota</span>';
-      let html = '';
-      for (let i = 1; i <= 5; i++) {
-        const full = i * 2;
-        const half = full - 1;
-        if (score10 >= full) {
-          html += '<i class="fa-solid fa-star"></i>';
-        } else if (score10 >= half) {
-          html += '<i class="fa-solid fa-star-half-stroke"></i>';
-        } else {
-          html += '<i class="fa-regular fa-star text-surface-600"></i>';
-        }
-      }
-      return html;
-    }
-
-    function openModal(id) {
-      document.getElementById(id).classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-      document.body.style.overflow = 'auto';
-    }
-
-    function showToast(msg, isError = false) {
-      const toast = document.getElementById('toast');
-      const text = document.getElementById('toast-message');
-      const icon = document.getElementById('toast-icon');
-
-      text.textContent = msg;
-      if (isError) {
-        icon.className = "fa-solid fa-circle-exclamation text-rose-500 text-lg";
-      } else {
-        icon.className = "fa-solid fa-circle-check text-brand-accent text-lg";
-      }
-
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-        toast.classList.remove('translate-y-0', 'opacity-100');
-      }, 3000);
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-    }
-
-    // Cerrar modales con tecla Escape
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeModal('modal-detail');
-        closeModal('modal-log');
-      }
-    });
-
-    // Iniciar app al cargar la ventana
-    window.onload = function() {
-      loadStorage();
-      loadTopAnime();
-    };
+    loadTrendingAnimes();
   </script>
 </body>
 </html>
